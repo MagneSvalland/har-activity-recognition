@@ -287,9 +287,9 @@ footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
       <a class="btn" href="https://github.com/MagneSvalland/har-activity-recognition">GitHub</a>
     </div>
     <div class="tiles">
-      <div class="tile"><div class="v">0,444</div><div class="l">Macro-F1, beste modell (Gradient Boosting V3)</div><div class="d">▲ 74 % fra baseline</div></div>
+      <div class="tile"><div class="v">0,444</div><div class="l">Macro-F1, beste modell (Gradient Boosting V3)</div><div class="d">▲ 87 % fra baseline (0,238)</div></div>
       <div class="tile"><div class="v">73 %</div><div class="l">Accuracy på testdata med sikre etiketter</div><div class="d">▲ fra 57 % i baseline</div></div>
-      <div class="tile"><div class="v">6,2 M</div><div class="l">Sekunder med sensordata i train/test</div></div>
+      <div class="tile"><div class="v">≈ 9 t</div><div class="l">Sensordata i train/test (ca. 33 000 sekunder)</div></div>
       <div class="tile"><div class="v">3</div><div class="l">Sensortyper: akselerometer, PIR og RSSI</div></div>
     </div>
   </div>
@@ -476,7 +476,7 @@ footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
     <div class="eyebrow">Oppsummert</div>
     <h2>Tre ting vi tar med oss</h2>
     <div class="takeaways">
-      <div class="card"><div class="big">+74 %</div><h3 style="margin-top:12px">Data før modell</h3><p>Fra 0,255 til 0,444 i macro-F1 uten å bytte modelltype. Tidskontekst og ryddige klasser gjorde jobben.</p></div>
+      <div class="card"><div class="big">+87 %</div><h3 style="margin-top:12px">Data før modell</h3><p>Gradient Boosting gikk fra 0,238 til 0,444 i macro-F1 uten å bytte modelltype. Tidskontekst og ryddige klasser gjorde jobben.</p></div>
       <div class="card"><div class="big">0,279</div><h3 style="margin-top:12px">Dyp læring var ingen snarvei</h3><p>1D-CNN på rå tidsserier tapte klart for Gradient Boosting med gode features. Med 10 treningssekvenser er datamengden for liten.</p></div>
       <div class="card"><div class="big">21 %</div><h3 style="margin-top:12px">Etikettene er usikre</h3><p>En femtedel av sekundene har under 60 % enighet mellom annotatørene. Det setter et tak på hvor gode resultatene kan bli.</p></div>
     </div>
@@ -549,7 +549,7 @@ const MODELS = [
 const STEPS = [
   {label:"Baseline", sub:"1 s, 20 klasser", v:.238},
   {label:"V3-features", sub:"tidskontekst, 20 klasser", v:.294},
-  {label:"Slåtte sammen overganger", sub:"12 klasser", v:.417},
+  {label:"Sammenslåtte overganger", sub:"12 klasser", v:.417},
   {label:"Clean semantic classes", sub:"10 klasser", v:.444},
   {label:"Sikre etiketter", sub:"high-confidence testsett", v:.489}
 ];
