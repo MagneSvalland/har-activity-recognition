@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hva gjør du nå? | HAR på SPHERE</title>
+<meta name="description" content="Interaktiv demo av en bacheloroppgave om maskinlæring for aktivitetsgjenkjenning i et smarthjem (SPHERE-datasettet).">
+<meta property="og:title" content="Hva gjør du nå? Maskinlæring for aktivitetsgjenkjenning">
+<meta property="og:description" content="Smarthjem-simulator, resultater, robusthet og forklarbarhet fra en bacheloroppgave ved HVL.">
+<meta property="og:image" content="assets/preview.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M5 18h5l3-8 4 14 3-9 2 3h5' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4;
+  --surface-1: #fcfcfb;
+  --surface-2: #efeeea;
+  --border: #e2e1dc;
+  --grid: #e8e7e2;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7d7c77;
+  --accent: #2a78d6;
+  --accent-soft: #cde2fb;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --neutral: #a9a8a2;
+  --good: #1a8a3a; --bad: #d03b3b;
+  --room: #f1f0ec; --room-line: #cfcec8; --room-on: #ffd98a;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+  --seq-0: #f2f6fc; --seq-1: #0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #111110;
+    --surface-1: #1a1a19;
+    --surface-2: #242422;
+    --border: #2e2e2c;
+    --grid: #2a2a28;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --accent: #3987e5;
+    --accent-soft: #1c3a5f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --neutral: #5d5c57;
+    --good: #3fb860; --bad: #e66767;
+    --room: #222220; --room-line: #3a3a37; --room-on: #6b5420;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    --seq-0: #1d2026; --seq-1: #86b6ef;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110;
+  --surface-1: #1a1a19;
+  --surface-2: #242422;
+  --border: #2e2e2c;
+  --grid: #2a2a28;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8f8e86;
+  --accent: #3987e5;
+  --accent-soft: #1c3a5f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --neutral: #5d5c57;
+  --good: #3fb860; --bad: #e66767;
+  --room: #222220; --room-line: #3a3a37; --room-on: #6b5420;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  --seq-0: #1d2026; --seq-1: #86b6ef;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .9em; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+/* nav */
+nav.top {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+nav.top .wrap { display: flex; align-items: center; gap: 20px; height: 56px; }
+.brand { font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.brand svg { flex: none; }
+.navlinks { display: flex; gap: 18px; margin-left: auto; overflow-x: auto; scrollbar-width: none; }
+.navlinks a { color: var(--text-secondary); font-size: 14px; white-space: nowrap; }
+.navlinks a:hover { color: var(--text-primary); text-decoration: none; }
+.iconbtn {
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+  border-radius: 8px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; flex: none;
+}
+@media (max-width: 720px) { .navlinks { display: none; } .iconbtn { margin-left: auto; } }
+
+/* hero */
+header.hero { padding: 72px 0 40px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(40px, 7vw, 76px); line-height: 1.02; letter-spacing: -.035em; margin: 12px 0 18px; font-weight: 800; }
+h1 .q { color: var(--accent); }
+.lede { font-size: clamp(17px, 2vw, 20px); color: var(--text-secondary); max-width: 680px; margin: 0; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px;
+  font-weight: 600; font-size: 15px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+  cursor: pointer; font-family: inherit;
+}
+.btn:hover { text-decoration: none; border-color: var(--text-muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-top: 44px; }
+@media (max-width: 820px) { .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.tile .v { font-size: 34px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .l { color: var(--text-secondary); font-size: 14px; margin-top: 6px; }
+.tile .d { font-size: 13px; color: var(--good); font-weight: 600; margin-top: 4px; }
+
+section { padding: 64px 0; border-top: 1px solid var(--border); }
+h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -.025em; line-height: 1.1; margin: 8px 0 12px; }
+h3 { font-size: 18px; margin: 0 0 4px; letter-spacing: -.01em; }
+.sub { color: var(--text-secondary); max-width: 720px; margin: 0 0 28px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); min-width: 0; }
+.card .hint { color: var(--text-muted); font-size: 13px; margin: 0 0 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: minmax(0,1fr); } }
+
+/* segmented controls */
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button {
+  border: 0; background: transparent; color: var(--text-secondary); font: 500 13px Inter, sans-serif;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.chip {
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+  font: 600 13px Inter, sans-serif; padding: 7px 14px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center;
+}
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* simulator */
+.sim { display: grid; grid-template-columns: 1.05fr 1fr; gap: 16px; }
+@media (max-width: 960px) { .sim { grid-template-columns: minmax(0,1fr); } }
+.simhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--bad); }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); animation: pulse 1.4s infinite; }
+.live.paused { color: var(--text-muted); } .live.paused i { background: var(--text-muted); animation: none; }
+@keyframes pulse { 50% { opacity: .25; } }
+.clock { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--text-muted); }
+svg.house { width: 100%; height: auto; display: block; }
+.house .room { fill: var(--room); stroke: var(--room-line); stroke-width: 1.5; transition: fill .25s; }
+.house .room.on { fill: var(--room-on); }
+.house .rlabel { fill: var(--text-secondary); font: 500 11px Inter, sans-serif; }
+.house .flabel { fill: var(--text-muted); font: 600 11px Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.house .ap { fill: var(--surface-1); stroke: var(--accent); stroke-width: 2; }
+.house .person { fill: var(--accent); stroke: var(--surface-1); stroke-width: 3; }
+.house .halo { fill: var(--accent); opacity: .18; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
+.legend-row span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+canvas.acc { width: 100%; height: 150px; display: block; }
+.sensorlabel { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; margin: 14px 0 6px; }
+.rssi { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+@media (max-width: 520px) { .rssi { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.rssi > div { background: var(--surface-2); border-radius: 8px; padding: 8px; font-size: 12px; color: var(--text-secondary); }
+.rssi .bar { height: 6px; border-radius: 3px; background: var(--grid); margin-top: 6px; overflow: hidden; }
+.rssi .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s; }
+.rssi b { color: var(--text-primary); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.verdict div { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+.verdict .k { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.verdict .val { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+.verdict .ok { color: var(--good); } .verdict .miss { color: var(--bad); }
+.probs { display: grid; gap: 5px; }
+.prow { display: grid; grid-template-columns: 58px 1fr 44px; align-items: center; gap: 8px; font-size: 13px; }
+.prow .nm { color: var(--text-secondary); }
+.prow .tr { height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.prow .tr i { display: block; height: 100%; background: var(--neutral); border-radius: 0 4px 4px 0; transition: width .35s ease; }
+.prow.pred .tr i { background: var(--accent); }
+.prow.truth .nm { color: var(--text-primary); font-weight: 700; }
+.prow.truth .nm::after { content: " ●"; color: var(--good); font-size: 9px; vertical-align: middle; }
+.prow .pc { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
+.ribbon { display: flex; gap: 2px; height: 22px; margin-top: 6px; }
+.ribbon i { flex: 1; border-radius: 2px; background: var(--good); opacity: .85; }
+.ribbon i.x { background: var(--bad); }
+.ribbon i.e { background: var(--surface-2); }
+.simstats { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); margin-top: 10px; }
+.simstats b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.disclaimer { font-size: 13px; color: var(--text-muted); margin-top: 14px; max-width: 900px; }
+
+/* pipeline */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+@media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+.step { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.step .n { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent); font-weight: 600; }
+.step p { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); }
+
+/* charts */
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--text-secondary); font: 12px Inter, sans-serif; }
+.chart .ax { stroke: var(--grid); stroke-width: 1; }
+.chart .tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .val { fill: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart .hit { fill: transparent; cursor: default; }
+.tip {
+  position: fixed; pointer-events: none; z-index: 50; background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 13px; box-shadow: var(--shadow);
+  opacity: 0; transition: opacity .1s; max-width: 260px;
+}
+.tip b { font-variant-numeric: tabular-nums; }
+.tip .t { color: var(--text-muted); font-size: 12px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--text-secondary); margin: 16px 0 0; font-size: 15px; }
+.callout b { color: var(--text-primary); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.rangewrap { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.rangewrap b { font-family: "JetBrains Mono", monospace; color: var(--text-primary); min-width: 60px; text-align: right; }
+.na { fill: var(--text-muted); font-style: italic; }
+
+.takeaways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 900px) { .takeaways { grid-template-columns: 1fr; } }
+.takeaways .card p { color: var(--text-secondary); margin: 6px 0 0; font-size: 15px; }
+.big { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--accent); line-height: 1; }
+
+details.table { margin-top: 12px; font-size: 13px; }
+details.table summary { cursor: pointer; color: var(--text-muted); }
+details.table table { border-collapse: collapse; margin-top: 8px; width: 100%; font-variant-numeric: tabular-nums; }
+details.table th, details.table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+details.table th { color: var(--text-muted); font-weight: 600; }
+.tablewrap { overflow-x: auto; }
+
+footer { padding: 48px 0 64px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; }
+footer .cols { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 24px; }
+@media (max-width: 720px) { footer .cols { grid-template-columns: 1fr; } }
+footer h4 { margin: 0 0 8px; color: var(--text-primary); font-size: 14px; }
+footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .live i { animation: none; } }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M5 18h5l3-8 4 14 3-9 2 3h5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      HAR&nbsp;·&nbsp;SPHERE
+    </a>
+    <div class="navlinks">
+      <a href="#demo">Demo</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#resultater">Resultater</a>
+      <a href="#robusthet">Robusthet</a>
+      <a href="#forklarbarhet">Forklarbarhet</a>
+      <a href="#les-mer">Rapport</a>
+    </div>
+    <button class="iconbtn" id="themeBtn" aria-label="Bytt mellom lyst og mørkt tema" title="Bytt tema">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Bacheloroppgave · HVL · 2026</div>
+    <h1>Hva gjør du <span class="q">nå?</span></h1>
+    <p class="lede">Vi lærte en maskin å gjette hva en person gjør hjemme, bare ut fra et armbånd på håndleddet og noen bevegelsessensorer i taket. Sitter, står, går i trappa eller ligger i senga. Denne siden lar deg se hvordan det fungerer, og hvor det fortsatt går galt.</p>
+    <div class="cta">
+      <a class="btn primary" href="#demo">▶ Start simulatoren</a>
+      <a class="btn" href="rapport.pdf">Les rapporten (PDF)</a>
+      <a class="btn" href="https://github.com/MagneSvalland/har-activity-recognition">GitHub</a>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="v">0,444</div><div class="l">Macro-F1, beste modell (Gradient Boosting V3)</div><div class="d">▲ 74 % fra baseline</div></div>
+      <div class="tile"><div class="v">73 %</div><div class="l">Accuracy på testdata med sikre etiketter</div><div class="d">▲ fra 57 % i baseline</div></div>
+      <div class="tile"><div class="v">6,2 M</div><div class="l">Sekunder med sensordata i train/test</div></div>
+      <div class="tile"><div class="v">3</div><div class="l">Sensortyper: akselerometer, PIR og RSSI</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ DEMO ============ -->
+<section id="demo">
+  <div class="wrap">
+    <div class="eyebrow">Live demo</div>
+    <h2>En dag i SPHERE-huset</h2>
+    <p class="sub">En person beveger seg rundt i et smarthjem. Armbåndet sender akselerasjon 20 ganger i sekundet, PIR-sensorene merker bevegelse i hvert rom, og signalstyrken (RSSI) til fire mottakere avslører omtrent hvor personen er. Hvert sekund gjetter modellen hvilken aktivitet det er.</p>
+
+    <div class="sim">
+      <div class="card">
+        <div class="simhead">
+          <span class="live" id="liveBadge"><i></i>LIVE</span>
+          <div class="seg" role="group" aria-label="Hastighet">
+            <button data-speed="1" aria-pressed="true">1×</button>
+            <button data-speed="2" aria-pressed="false">2×</button>
+            <button data-speed="4" aria-pressed="false">4×</button>
+          </div>
+          <button class="chip" id="playBtn" aria-pressed="false">❚❚ Pause</button>
+          <span class="clock" id="clock">t = 0 s</span>
+        </div>
+        <svg class="house" id="house" viewBox="0 0 560 300" role="img" aria-label="Plantegning av huset med to etasjer"></svg>
+        <div class="legend-row">
+          <span><i class="sw" style="background:var(--room-on)"></i>PIR merker bevegelse</span>
+          <span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>RSSI-mottaker</span>
+          <span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="var(--accent)"/></svg>Personen</span>
+        </div>
+        <div class="sensorlabel"><span>Akselerometer (håndledd)</span><span id="accLegend"></span></div>
+        <canvas class="acc" id="acc"></canvas>
+        <div class="sensorlabel"><span>Signalstyrke (RSSI)</span><span>dBm</span></div>
+        <div class="rssi" id="rssi"></div>
+      </div>
+
+      <div class="card">
+        <div class="verdict">
+          <div><div class="k">Fasit</div><div class="val" id="truth">…</div></div>
+          <div><div class="k">Modellen tror</div><div class="val" id="pred">…</div></div>
+        </div>
+        <div class="sensorlabel" style="margin-top:0"><span>Sannsynlighet per klasse</span><span>Gradient Boosting V3</span></div>
+        <div class="probs" id="probs"></div>
+        <div class="sensorlabel"><span>Siste 60 sekunder</span><span><span style="color:var(--good)">■</span> riktig &nbsp;<span style="color:var(--bad)">■</span> feil</span></div>
+        <div class="ribbon" id="ribbon"></div>
+        <div class="simstats">
+          <span>Treff i økta: <b id="accSession">–</b></span>
+          <span>Modellens accuracy på testsettet: <b>68,9 %</b></span>
+        </div>
+      </div>
+    </div>
+    <p class="disclaimer"><b>Slik er demoen laget:</b> sensorsignalene er syntetiske og laget for å ligne SPHERE-dataene. Prediksjonene er derimot ikke pyntet på. De trekkes fra den faktiske forvirringsmatrisen til Gradient Boosting V3 på testsettet, så modellen bommer like ofte og på de samme måtene som i virkeligheten. Legg merke til hvordan «Turn» og «Stairs» ofte blir tolket som «Stand» eller «Walk».</p>
+  </div>
+</section>
+
+<!-- ============ PIPELINE ============ -->
+<section id="pipeline">
+  <div class="wrap">
+    <div class="eyebrow">Hva vi endret</div>
+    <h2>Bedre data slo større modeller</h2>
+    <p class="sub">Første forsøk (baseline) så på ett og ett sekund isolert og prøvde å skille 20 aktiviteter fra hverandre. Det gikk dårlig. I stedet for å kaste mer kompliserte modeller på problemet, bygde vi om datagrunnlaget. Det var her gevinsten lå.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Tidskontekst</h3><p>5-sekunders vinduer med lag- og lead-variabler. Modellen ser hva som skjedde rett før og rett etter.</p></div>
+      <div class="step"><div class="n">02</div><h3>Ryddige klasser</h3><p>20 overlappende klasser ble til 10. «Sit to stand» hører hjemme hos «Stand», ikke i en egen kategori.</p></div>
+      <div class="step"><div class="n">03</div><h3>Usikre etiketter</h3><p>Datasettet har flere annotatører. Sekunder der de var uenige (confidence under 0,6) ble filtrert ut eller vektet ned.</p></div>
+      <div class="step"><div class="n">04</div><h3>Sekvens-CNN</h3><p>En 1D-CNN trent direkte på rå tidsserier. Interessant, men slo ikke de klassiske modellene.</p></div>
+    </div>
+    <div class="card chart">
+      <h3>Gradient Boosting, steg for steg</h3>
+      <p class="hint">Macro-F1 etter hvert grep. Hold musa over en stolpe for detaljer.</p>
+      <div id="stepChart"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESULTATER ============ -->
+<section id="resultater">
+  <div class="wrap">
+    <div class="eyebrow">Resultater</div>
+    <h2>Alle modellene, side om side</h2>
+    <p class="sub">Vi brukte macro-F1 som hovedmål. Det vekter alle aktiviteter likt, så en modell kan ikke jukse ved å gjette «Stand» hele tiden. Det er derfor Dummy-modellen får høy accuracy men nesten null macro-F1.</p>
+    <div class="card chart">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Metrikk" id="metricSeg">
+          <button data-m="f1" aria-pressed="true">Macro-F1</button>
+          <button data-m="wf1" aria-pressed="false">Weighted-F1</button>
+          <button data-m="acc" aria-pressed="false">Accuracy</button>
+        </div>
+      </div>
+      <div class="legend"><span><i class="sw" style="background:var(--neutral)"></i>Baseline</span><span><i class="sw" style="background:var(--accent)"></i>V3 (clean semantic classes)</span></div>
+      <div id="modelChart"></div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card chart">
+        <h3>Hvor bommer den?</h3>
+        <p class="hint">Forvirringsmatrise for Gradient Boosting V3, normalisert per rad. Rad = fasit, kolonne = prediksjon.</p>
+        <div id="cmChart"></div>
+      </div>
+      <div class="card chart">
+        <h3>F1 per aktivitet</h3>
+        <p class="hint">Gradient Boosting, baseline mot V3. Baseline er mappet til de samme 10 klassene.</p>
+        <div class="legend"><span><i class="sw" style="background:var(--neutral)"></i>Baseline</span><span><i class="sw" style="background:var(--accent)"></i>V3</span></div>
+        <div id="classChart"></div>
+      </div>
+    </div>
+    <p class="callout"><b>Stille aktiviteter er lette, overganger er vanskelige.</b> Sit, Stand og Lie treffer rundt 0,75 til 0,78 i F1. Turn og Squat er nesten umulige: de varer bare et par sekunder, er sjeldne, og ser ut som å stå stille på et håndleddsarmbånd.</p>
+  </div>
+</section>
+
+<!-- ============ ROBUSTHET ============ -->
+<section id="robusthet">
+  <div class="wrap">
+    <div class="eyebrow">Robusthet</div>
+    <h2>Hva skjer når ting går galt?</h2>
+    <p class="sub">En modell som bare virker på perfekte data er lite verdt i et ekte hjem. Vi testet tre ting: støy i signalene, sensorer som faller ut, og om resultatene holder seg med ulike random seeds.</p>
+
+    <div class="grid2">
+      <div class="card chart">
+        <h3>Støy i sensordata</h3>
+        <p class="hint">Gaussisk støy med standardavvik σ lagt på alle features.</p>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Pipeline" id="noisePipe">
+            <button data-p="V3" aria-pressed="true">V3</button>
+            <button data-p="Baseline" aria-pressed="false">Baseline</button>
+          </div>
+        </div>
+        <div class="rangewrap"><span>σ</span><input type="range" id="noiseSlider" min="0" max="3" step="1" value="0" aria-label="Støynivå"><b id="noiseVal">0,00</b></div>
+        <div class="legend" id="noiseLegend"></div>
+        <div id="noiseChart"></div>
+      </div>
+
+      <div class="card chart">
+        <h3>Sensorablasjon</h3>
+        <p class="hint">Slå sensorer av og på og se hvordan modellene klarer seg.</p>
+        <div class="controls" id="sensorChips">
+          <button class="chip" data-s="ACC" aria-pressed="true">⌚ Akselerometer</button>
+          <button class="chip" data-s="PIR" aria-pressed="true">◉ PIR</button>
+          <button class="chip" data-s="RSSI" aria-pressed="true">📶 RSSI</button>
+        </div>
+        <div class="legend"><span><i class="sw" style="background:var(--neutral)"></i>Baseline</span><span><i class="sw" style="background:var(--accent)"></i>V3</span></div>
+        <div id="ablChart"></div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <h3>Random seed</h3>
+        <p class="hint">Tre treningskjøringer med ulike seeds.</p>
+        <div class="big">0,446 <span style="font-size:20px;color:var(--text-muted);font-weight:600">± 0,002</span></div>
+        <p style="color:var(--text-secondary);margin:8px 0 0">Macro-F1 for Gradient Boosting V3 på tvers av seeds. Resultatene er stabile, så forbedringen kommer ikke av flaks.</p>
+      </div>
+      <div class="card">
+        <h3>Det viktigste funnet</h3>
+        <p style="color:var(--text-secondary);margin:6px 0 0">Akselerometer og RSSI sammen (<b style="color:var(--text-primary)">0,447</b>) er like gode som alle tre sensorene (<b style="color:var(--text-primary)">0,444</b>). PIR alene gir nesten ingenting. Et billigere oppsett med bare armbånd og et par mottakere ville altså holdt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FORKLARBARHET ============ -->
+<section id="forklarbarhet">
+  <div class="wrap">
+    <div class="eyebrow">Forklarbarhet</div>
+    <h2>Hva ser modellen etter?</h2>
+    <p class="sub">Vi brukte permutation importance og SHAP for å åpne den svarte boksen. Svaret endret seg mye mellom pipelinene, og det forteller noe om hvorfor V3 ble bedre.</p>
+    <div class="card chart">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Metode" id="xaiSeg">
+          <button data-x="perm_v3" aria-pressed="true">Permutation · V3</button>
+          <button data-x="shap_v3" aria-pressed="false">SHAP · V3</button>
+          <button data-x="perm_base" aria-pressed="false">Permutation · Baseline</button>
+        </div>
+      </div>
+      <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Akselerometer</span><span><i class="sw" style="background:var(--s2)"></i>RSSI</span><span><i class="sw" style="background:var(--s3)"></i>PIR</span></div>
+      <div id="xaiChart"></div>
+      <p class="callout" id="xaiNote"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TAKEAWAYS ============ -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Oppsummert</div>
+    <h2>Tre ting vi tar med oss</h2>
+    <div class="takeaways">
+      <div class="card"><div class="big">+74 %</div><h3 style="margin-top:12px">Data før modell</h3><p>Fra 0,255 til 0,444 i macro-F1 uten å bytte modelltype. Tidskontekst og ryddige klasser gjorde jobben.</p></div>
+      <div class="card"><div class="big">0,279</div><h3 style="margin-top:12px">Dyp læring var ingen snarvei</h3><p>1D-CNN på rå tidsserier tapte klart for Gradient Boosting med gode features. Med 10 treningssekvenser er datamengden for liten.</p></div>
+      <div class="card"><div class="big">21 %</div><h3 style="margin-top:12px">Etikettene er usikre</h3><p>En femtedel av sekundene har under 60 % enighet mellom annotatørene. Det setter et tak på hvor gode resultatene kan bli.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer id="les-mer">
+  <div class="wrap cols">
+    <div>
+      <h4>Maskinlæring for aktivitetsgjenkjenning</h4>
+      <p style="margin:0">En sammenligning av ytelse, robusthet og forklarbarhet. Bacheloroppgave i informasjonsteknologi ved Høgskulen på Vestlandet, våren 2026.</p>
+      <p>Hans Christian Gustafsson, Jonatan Dam og Magne Svalland. Veileder: Faiga Alawad.</p>
+    </div>
+    <div>
+      <h4>Les mer</h4>
+      <ul>
+        <li><a href="rapport.pdf">Rapporten (56 sider)</a></li>
+        <li><a href="prosjekthandbok.pdf">Prosjekthåndbok</a></li>
+        <li><a href="presentasjon.pdf">Videopresentasjon</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Kode og data</h4>
+      <ul>
+        <li><a href="https://github.com/MagneSvalland/har-activity-recognition">GitHub-repo</a></li>
+        <li><a href="https://nbviewer.org/github/MagneSvalland/har-activity-recognition/blob/master/notebook/DAT191_H3.ipynb">Notebook (nbviewer)</a></li>
+        <li><a href="https://irc-sphere.ac.uk/">SPHERE-prosjektet</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="tip" id="tip"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------------------------------------------------------------
+   Data, hentet fra notebooken (notebook/DAT191_H3.ipynb)
+---------------------------------------------------------------- */
+const CLASSES = ["Bent","Jump","Kneel","Lie","Sit","Squat","Stairs","Stand","Turn","Walk"];
+const NAMES_NO = {Bent:"Bøyd",Jump:"Hopp",Kneel:"Knestående",Lie:"Ligger",Sit:"Sitter",Squat:"Huk",Stairs:"Trapp",Stand:"Står",Turn:"Snur seg",Walk:"Går"};
+const SUPPORT = [851,31,445,1575,3165,24,1068,7098,559,1767];
+// Rad-normalisert forvirringsmatrise, Gradient Boosting V3 (clean semantic classes)
+const CM = [
+  [.40,0,0,.03,.08,0,0,.43,0,.06],
+  [0,.90,0,0,0,0,0,.03,0,.06],
+  [.16,0,.16,.02,.14,0,0,.52,0,0],
+  [0,0,0,.75,.21,0,0,.03,0,.01],
+  [.01,0,0,.06,.85,0,0,.06,0,.02],
+  [.08,0,.29,0,0,0,0,.46,0,.17],
+  [.02,0,0,.05,.03,0,.18,.34,0,.38],
+  [.02,0,0,.01,.06,0,0,.82,0,.07],
+  [.03,.01,.01,.04,.03,0,.01,.53,.01,.34],
+  [.01,0,0,.01,.03,0,.03,.28,.01,.61]
+];
+const F1_GB_V3 = [.467,.589,.241,.747,.782,0,.291,.780,.010,.527];
+const F1_GB_DELTA = [.142,.209,.182,.142,.084,0,-.226,.049,.010,.130];
+
+const MODELS = [
+  {name:"Gradient Boosting", base:{acc:.567,f1:.238,wf1:.514}, v3:{acc:.689,f1:.444,wf1:.661}},
+  {name:"Random Forest",     base:{acc:.565,f1:.255,wf1:.510}, v3:{acc:.679,f1:.417,wf1:.641}},
+  {name:"Logistic Regression",base:{acc:.183,f1:.144,wf1:.176}, v3:{acc:.526,f1:.386,wf1:.548}},
+  {name:"Linear SVM",        base:{acc:.223,f1:.133,wf1:.222}, v3:{acc:.510,f1:.376,wf1:.531}},
+  {name:"1D-CNN",            base:{acc:.374,f1:.239,wf1:.390}, v3:{acc:.342,f1:.279,wf1:.365}, cnn:true},
+  {name:"Dummy",             base:{acc:.382,f1:.028,wf1:.211}, v3:{acc:.191,f1:.032,wf1:.061}}
+];
+
+const STEPS = [
+  {label:"Baseline", sub:"1 s, 20 klasser", v:.238},
+  {label:"V3-features", sub:"tidskontekst, 20 klasser", v:.294},
+  {label:"Slåtte sammen overganger", sub:"12 klasser", v:.417},
+  {label:"Clean semantic classes", sub:"10 klasser", v:.444},
+  {label:"Sikre etiketter", sub:"high-confidence testsett", v:.489}
+];
+
+const NOISE_LEVELS = [0, .05, .10, .20];
+const NOISE = {
+  V3: {
+    "Gradient Boosting":[.444,.411,.375,.334],
+    "Random Forest":[.417,.365,.320,.275],
+    "Logistic Regression":[.386,.290,.204,.136],
+    "Linear SVM":[.376,.227,.143,.091]
+  },
+  Baseline: {
+    "Gradient Boosting":[.200,.155,.129,.102],
+    "Random Forest":[.252,.214,.188,.150],
+    "Logistic Regression":[.134,.133,.129,.108],
+    "Linear SVM":[.118,.116,.111,.093]
+  }
+};
+const SHORT = {"Gradient Boosting":"GB","Random Forest":"RF","Logistic Regression":"LR","Linear SVM":"SVM"};
+const MODEL_COLORS = {"Gradient Boosting":"--s1","Random Forest":"--s2","Logistic Regression":"--s3","Linear SVM":"--s4"};
+
+// Sensorablasjon, macro-F1 [GB, RF, LR, SVM]
+const ABL = {
+  V3: {
+    "ACC":[.376,.348,.295,.253], "PIR":[.142,.143,.142,.140], "RSSI":[.285,.290,.248,.222],
+    "ACC+PIR":[.385,.357,.316,.280], "ACC+RSSI":[.447,.415,.373,.362], "PIR+RSSI":[.303,.312,.278,.264],
+    "ACC+PIR+RSSI":[.444,.416,.386,.376]
+  },
+  Baseline: {
+    "ACC":[.151,.173,.082,.060], "PIR":[.046,.038,.047,.047], "RSSI":[.112,.105,.051,.045],
+    "ACC+PIR":[.161,.190,.109,.095], "ACC+RSSI":[.223,.244,.110,.083], "PIR+RSSI":null,
+    "ACC+PIR+RSSI":[.225,.252,.134,.118]
+  }
+};
+const ABL_MODELS = ["Gradient Boosting","Random Forest","Logistic Regression","Linear SVM"];
+
+const XAI = {
+  perm_v3: {unit:"Fall i macro-F1", rows:[
+    ["magnitude_std",.0351],["rssi_stairs_max",.0310],["rssi_stairs_mean",.0281],["rssi_kitchen_max",.0190],
+    ["rssi_stairs_std",.0100],["rssi_kitchen_min",.0085],["energy_min_lead1",.0079],["rssi_kitchen_range",.0076],
+    ["z_min_lead1",.0058],["y_q25_lag3",.0054],["pir_total_activity",.0051],["y_q25_lead1",.0045]],
+    note:"<b>Bevegelse pluss posisjon.</b> Variasjonen i armbåndets bevegelse er viktigst, men så kommer signalstyrken mot trappa og kjøkkenet. Legg merke til <code>_lead1</code> og <code>_lag3</code>: modellen bruker aktivt hva som skjer sekundene før og etter."},
+  shap_v3: {unit:"Gj.snitt |SHAP|", rows:[
+    ["rssi_stairs_max",.1764],["rssi_kitchen_max",.1544],["rssi_stairs_mean",.1128],["rssi_kitchen_range",.1021],
+    ["rssi_kitchen_min",.0955],["pir_total_activity",.0919],["rssi_stairs_std",.0871],["rssi_kitchen_mean",.0697],
+    ["x_max_lead1",.0649],["z_min_lead1",.0580],["energy_median_lead1",.0552],["motion_ratio_03_lead1",.0513]],
+    note:"<b>SHAP peker enda tydeligere på rom.</b> Å vite at personen er i trappa gjør «Stairs» mye mer sannsynlig. Det er nyttig, men også en risiko: modellen kan lære seg huset i stedet for bevegelsen, og det generaliserer dårlig til et annet hjem."},
+  perm_base: {unit:"Fall i macro-F1", rows:[
+    ["x_mean",.0756],["x_std",.0712],["z_mean",.0456],["y_mean",.0435],["kitchen_y (RSSI)",.0431],["stairs_y (RSSI)",.0301],
+    ["z_std",.0260],["living_y (RSSI)",.0255],["y_std",.0245],["living_x (PIR)",.0112],["study_y (RSSI)",.0060],["stairs_x (PIR)",.0028]],
+    note:"<b>Baseline så nesten bare på håndleddets vinkel.</b> Gjennomsnittlig akselerasjon per akse sier mest om hvordan armen holdes, ikke hva kroppen gjør. Uten tidskontekst hadde modellen lite annet å gå på."}
+};
+
+/* ---------------------------------------------------------------
+   Felles hjelpere
+---------------------------------------------------------------- */
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (v, d=3) => v.toFixed(d).replace(".", ",");
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs={}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, attrs={}) { const t = el("text", {x, y, ...attrs}, parent); t.textContent = s; return t; }
+function barPath(x, y, w, h, r=4) {
+  // horisontal stolpe, avrundet kun i dataenden (høyre)
+  if (w <= 0) return "";
+  r = Math.min(r, w, h/2);
+  return `M${x},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h-r}Q${x+w},${y+h} ${x+w-r},${y+h}H${x}Z`;
+}
+function vbarPath(x, y, w, h, r=4) {
+  if (h <= 0) return "";
+  r = Math.min(r, h, w/2);
+  return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`;
+}
+const tip = $("#tip");
+function showTip(e, html) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.opacity = 0; }
+function bindTip(node, html) {
+  node.addEventListener("mousemove", e => showTip(e, typeof html === "function" ? html() : html));
+  node.addEventListener("mouseleave", hideTip);
+}
+function segGroup(root, attr, onChange) {
+  $$("button", root).forEach(b => b.addEventListener("click", () => {
+    $$("button", root).forEach(x => x.setAttribute("aria-pressed", x === b));
+    onChange(b.dataset[attr]);
+  }));
+}
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const c = (s) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
+  return `rgb(${c(16)},${c(8)},${c(0)})`;
+}
+
+/* ---------------------------------------------------------------
+   Tema
+---------------------------------------------------------------- */
+const themeBtn = $("#themeBtn");
+function currentDark() {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+try { const saved = localStorage.getItem("har-theme"); if (saved) document.documentElement.dataset.theme = saved; } catch (e) {}
+themeBtn.addEventListener("click", () => {
+  const next = currentDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("har-theme", next); } catch (e) {}
+  renderAll();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+
+/* ---------------------------------------------------------------
+   Graf: steg-for-steg
+---------------------------------------------------------------- */
+function renderSteps() {
+  const host = $("#stepChart"); host.innerHTML = "";
+  const W = 1040, H = 300, pl = 40, pr = 10, pt = 28, pb = 62;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"Macro-F1 for Gradient Boosting etter hvert steg"}, host);
+  const y = v => pt + (H - pt - pb) * (1 - v / .5);
+  [0,.1,.2,.3,.4,.5].forEach(v => {
+    el("line", {x1:pl, x2:W-pr, y1:y(v), y2:y(v), class:"ax"}, svg);
+    txt(svg, pl-8, y(v)+4, fmt(v,1), {class:"tick", "text-anchor":"end"});
+  });
+  const n = STEPS.length, slot = (W - pl - pr) / n, bw = Math.min(110, slot * .5);
+  STEPS.forEach((s, i) => {
+    const cx = pl + slot * i + slot / 2;
+    const last = i === n - 1;
+    el("path", {d: vbarPath(cx - bw/2, y(s.v), bw, y(0) - y(s.v)), fill: i === 0 ? css("--neutral") : css("--accent"), opacity: last ? .55 : 1}, svg);
+    txt(svg, cx, y(s.v) - 8, fmt(s.v), {class:"val", "text-anchor":"middle"});
+    txt(svg, cx, H - pb + 20, s.label, {"text-anchor":"middle", style:"font-weight:600;fill:var(--text-primary)"});
+    txt(svg, cx, H - pb + 37, s.sub, {"text-anchor":"middle", class:"tick"});
+    if (i > 0) {
+      const d = (s.v - STEPS[i-1].v) / STEPS[i-1].v * 100;
+      txt(svg, cx - slot/2, y(Math.max(s.v, STEPS[i-1].v)) - 30, `+${Math.round(d)} %`, {"text-anchor":"middle", style:`fill:${css("--good")};font-weight:600;font-size:12px`});
+    }
+    const hit = el("rect", {x: cx - slot/2, y: pt, width: slot, height: H - pt - pb, class:"hit"}, svg);
+    bindTip(hit, `<b>${s.label}</b><div class="t">${s.sub}</div>Macro-F1: <b>${fmt(s.v)}</b>${last ? '<div class="t">Målt på et testsett der usikre sekunder er fjernet</div>' : ""}`);
+  });
+}
+
+/* ---------------------------------------------------------------
+   Graf: modellsammenligning
+---------------------------------------------------------------- */
+let metric = "f1";
+const METRIC_NAME = {f1:"Macro-F1", wf1:"Weighted-F1", acc:"Accuracy"};
+function renderModels() {
+  const host = $("#modelChart"); host.innerHTML = "";
+  const W = 1040, rowH = 54, pl = 170, pr = 60, pt = 8;
+  const H = pt + MODELS.length * rowH + 24;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":`${METRIC_NAME[metric]} per modell`}, host);
+  const max = metric === "f1" ? .5 : .8;
+  const x = v => pl + (W - pl - pr) * v / max;
+  const ticks = metric === "f1" ? [0,.1,.2,.3,.4,.5] : [0,.2,.4,.6,.8];
+  ticks.forEach(v => {
+    el("line", {x1:x(v), x2:x(v), y1:pt, y2:H-24, class:"ax"}, svg);
+    txt(svg, x(v), H - 6, fmt(v,1), {class:"tick", "text-anchor":"middle"});
+  });
+  MODELS.forEach((m, i) => {
+    const y0 = pt + i * rowH;
+    txt(svg, pl - 12, y0 + rowH/2 + 4, m.name, {"text-anchor":"end", style:"fill:var(--text-primary);font-weight:500;font-size:13px"});
+    const bh = 17;
+    const bv = m.base[metric], vv = m.v3[metric];
+    el("path", {d: barPath(x(0), y0 + 8, x(bv) - x(0), bh), fill: css("--neutral")}, svg);
+    el("path", {d: barPath(x(0), y0 + 8 + bh + 2, x(vv) - x(0), bh), fill: css("--accent")}, svg);
+    txt(svg, x(bv) + 6, y0 + 8 + bh - 4, fmt(bv), {class:"tick"});
+    txt(svg, x(vv) + 6, y0 + 8 + 2*bh - 2, fmt(vv), {class:"val", style:"font-size:12px"});
+    const hit = el("rect", {x: 0, y: y0, width: W, height: rowH, class:"hit"}, svg);
+    const v3name = m.cnn ? "Raw 1D-CNN V2" : "V3";
+    const bname = m.cnn ? "1D-CNN V1" : "Baseline";
+    bindTip(hit, `<b>${m.name}</b><div class="t">${METRIC_NAME[metric]}</div>${bname}: <b>${fmt(bv)}</b><br>${v3name}: <b>${fmt(vv)}</b>${m.cnn ? '<div class="t">CNN V2 er trent på rå tidsserier</div>' : ""}`);
+  });
+}
+
+/* ---------------------------------------------------------------
+   Graf: forvirringsmatrise
+---------------------------------------------------------------- */
+function renderCM() {
+  const host = $("#cmChart"); host.innerHTML = "";
+  const n = CLASSES.length, pl = 58, pt = 8, cell = 40, pb = 54;
+  const W = pl + n * cell + 4, H = pt + n * cell + pb;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"Forvirringsmatrise"}, host);
+  const c0 = css("--seq-0"), c1 = css("--seq-1");
+  const dark = currentDark();
+  CM.forEach((row, i) => {
+    txt(svg, pl - 6, pt + i * cell + cell/2 + 4, CLASSES[i], {"text-anchor":"end", style:"font-size:11px"});
+    row.forEach((v, j) => {
+      const t = Math.sqrt(v / .9);
+      const r = el("rect", {x: pl + j*cell + 1, y: pt + i*cell + 1, width: cell - 2, height: cell - 2, rx: 3, fill: mixHex(c0, c1, Math.min(1, t))}, svg);
+      if (v >= .1) {
+        const light = dark ? t < .55 : t > .5;
+        txt(svg, pl + j*cell + cell/2, pt + i*cell + cell/2 + 4, Math.round(v*100), {"text-anchor":"middle", style:`font-size:11px;font-weight:600;fill:${light ? (dark ? "#f0efec" : "#fff") : (dark ? "#0b0b0b" : "#0b0b0b")}`});
+      }
+      if (i === j) el("rect", {x: pl + j*cell + 1, y: pt + i*cell + 1, width: cell - 2, height: cell - 2, rx: 3, fill:"none", stroke: css("--text-primary"), "stroke-width": 1.2, opacity:.5}, svg);
+      bindTip(r, `Fasit <b>${CLASSES[i]}</b> → predikert <b>${CLASSES[j]}</b><br><b>${Math.round(v*100)} %</b> av ${SUPPORT[i].toLocaleString("no")} sekunder`);
+    });
+  });
+  CLASSES.forEach((c, j) => {
+    const t = txt(svg, 0, 0, c, {"text-anchor":"end", style:"font-size:11px", transform:`translate(${pl + j*cell + cell/2 + 4},${pt + n*cell + 8}) rotate(-45)`});
+  });
+}
+
+/* ---------------------------------------------------------------
+   Graf: F1 per klasse
+---------------------------------------------------------------- */
+function renderClass() {
+  const host = $("#classChart"); host.innerHTML = "";
+  const order = CLASSES.map((c, i) => i).sort((a, b) => F1_GB_V3[b] - F1_GB_V3[a]);
+  const W = 460, rowH = 36, pl = 64, pr = 40, pt = 4;
+  const H = pt + order.length * rowH + 22;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"F1 per aktivitet"}, host);
+  const x = v => pl + (W - pl - pr) * v;
+  [0,.25,.5,.75,1].forEach(v => {
+    el("line", {x1:x(v), x2:x(v), y1:pt, y2:H-22, class:"ax"}, svg);
+    txt(svg, x(v), H-6, fmt(v,2), {class:"tick", "text-anchor":"middle"});
+  });
+  order.forEach((i, k) => {
+    const y0 = pt + k * rowH;
+    const v3 = F1_GB_V3[i], base = Math.max(0, v3 - F1_GB_DELTA[i]);
+    txt(svg, pl - 8, y0 + rowH/2 + 4, CLASSES[i], {"text-anchor":"end", style:"font-size:12px;fill:var(--text-primary)"});
+    el("path", {d: barPath(x(0), y0 + 6, x(base) - x(0), 11, 3), fill: css("--neutral")}, svg);
+    el("path", {d: barPath(x(0), y0 + 19, x(v3) - x(0), 11, 3), fill: css("--accent")}, svg);
+    txt(svg, Math.max(x(v3), x(base)) + 5, y0 + 29, fmt(v3, 2), {class:"tick"});
+    const hit = el("rect", {x:0, y:y0, width:W, height:rowH, class:"hit"}, svg);
+    const d = F1_GB_DELTA[i];
+    bindTip(hit, `<b>${CLASSES[i]}</b> (${NAMES_NO[CLASSES[i]]})<br>Baseline: <b>${fmt(base,2)}</b><br>V3: <b>${fmt(v3,2)}</b><div class="t">${d >= 0 ? "+" : ""}${fmt(d,2)} · ${SUPPORT[i].toLocaleString("no")} testsekunder</div>`);
+  });
+}
+
+/* ---------------------------------------------------------------
+   Graf: støy
+---------------------------------------------------------------- */
+let noisePipe = "V3", noiseIdx = 0;
+function renderNoise() {
+  const host = $("#noiseChart"); host.innerHTML = "";
+  const data = NOISE[noisePipe];
+  const W = 460, H = 270, pl = 40, pr = 128, pt = 10, pb = 28;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"Macro-F1 mot støynivå"}, host);
+  const x = i => pl + (W - pl - pr) * NOISE_LEVELS[i] / .2;
+  const y = v => pt + (H - pt - pb) * (1 - v / .5);
+  [0,.1,.2,.3,.4,.5].forEach(v => {
+    el("line", {x1:pl, x2:W-pr, y1:y(v), y2:y(v), class:"ax"}, svg);
+    txt(svg, pl-6, y(v)+4, fmt(v,1), {class:"tick", "text-anchor":"end"});
+  });
+  NOISE_LEVELS.forEach((n, i) => txt(svg, x(i), H-8, fmt(n,2), {class:"tick", "text-anchor":"middle"}));
+  el("line", {x1:x(noiseIdx), x2:x(noiseIdx), y1:pt, y2:H-pb, stroke: css("--text-muted"), "stroke-width":1}, svg);
+  const leg = $("#noiseLegend"); leg.innerHTML = "";
+  const labels = [];
+  Object.entries(data).forEach(([m, vals]) => {
+    const c = css(MODEL_COLORS[m]);
+    el("polyline", {points: vals.map((v, i) => `${x(i)},${y(v)}`).join(" "), fill:"none", stroke:c, "stroke-width":2, "stroke-linejoin":"round"}, svg);
+    vals.forEach((v, i) => el("circle", {cx:x(i), cy:y(v), r: i === noiseIdx ? 5.5 : 3.5, fill:c, stroke: css("--surface-1"), "stroke-width":2}, svg));
+    labels.push({m, v: vals[noiseIdx], c, drop: vals[noiseIdx] / vals[0] - 1});
+    leg.insertAdjacentHTML("beforeend", `<span><i class="sw" style="background:${c}"></i>${m}</span>`);
+  });
+  // direkte etiketter ved valgt punkt, spredt så de ikke kolliderer
+  labels.sort((a, b) => b.v - a.v);
+  let lastY = -Infinity;
+  labels.forEach(l => {
+    let ly = Math.max(y(l.v) + 4, lastY + 15); lastY = ly;
+    txt(svg, W - pr + 8, ly, `${SHORT[l.m]} ${fmt(l.v)}${noiseIdx ? "  " + (l.drop*100).toFixed(0) + " %" : ""}`, {style:"font-size:11px;font-variant-numeric:tabular-nums;fill:var(--text-primary)"});
+  });
+  NOISE_LEVELS.forEach((n, i) => {
+    const hit = el("rect", {x: x(i) - 25, y: pt, width: 50, height: H - pt - pb, class:"hit"}, svg);
+    bindTip(hit, `<b>σ = ${fmt(n,2)}</b> · ${noisePipe}<br>` + Object.entries(data).map(([m, v]) => `${m}: <b>${fmt(v[i])}</b>`).join("<br>"));
+    hit.addEventListener("click", () => { $("#noiseSlider").value = i; setNoise(i); });
+  });
+}
+function setNoise(i) { noiseIdx = +i; $("#noiseVal").textContent = fmt(NOISE_LEVELS[noiseIdx], 2); renderNoise(); }
+
+/* ---------------------------------------------------------------
+   Graf: sensorablasjon
+---------------------------------------------------------------- */
+const sensors = {ACC:true, PIR:true, RSSI:true};
+function renderAbl() {
+  const host = $("#ablChart"); host.innerHTML = "";
+  const key = ["ACC","PIR","RSSI"].filter(s => sensors[s]).join("+");
+  const W = 460, rowH = 50, pl = 140, pr = 46, pt = 4;
+  const H = pt + ABL_MODELS.length * rowH + 22;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"Macro-F1 med valgte sensorer"}, host);
+  const x = v => pl + (W - pl - pr) * v / .5;
+  [0,.1,.2,.3,.4,.5].forEach(v => {
+    el("line", {x1:x(v), x2:x(v), y1:pt, y2:H-22, class:"ax"}, svg);
+    txt(svg, x(v), H-6, fmt(v,1), {class:"tick", "text-anchor":"middle"});
+  });
+  if (!key) {
+    txt(svg, (pl + W - pr)/2, H/2, "Ingen sensorer valgt. Modellen er blind.", {"text-anchor":"middle", class:"na"});
+    return;
+  }
+  const v3 = ABL.V3[key], base = ABL.Baseline[key];
+  ABL_MODELS.forEach((m, i) => {
+    const y0 = pt + i * rowH;
+    txt(svg, pl - 10, y0 + rowH/2 + 4, m, {"text-anchor":"end", style:"font-size:12px;fill:var(--text-primary)"});
+    if (base) {
+      el("path", {d: barPath(x(0), y0 + 8, x(base[i]) - x(0), 15), fill: css("--neutral")}, svg);
+      txt(svg, x(base[i]) + 5, y0 + 20, fmt(base[i]), {class:"tick"});
+    } else {
+      txt(svg, x(0) + 4, y0 + 20, "ikke testet", {class:"na", style:"font-size:11px"});
+    }
+    el("path", {d: barPath(x(0), y0 + 25, x(v3[i]) - x(0), 15), fill: css("--accent")}, svg);
+    txt(svg, x(v3[i]) + 5, y0 + 37, fmt(v3[i]), {class:"val", style:"font-size:12px"});
+    const hit = el("rect", {x:0, y:y0, width:W, height:rowH, class:"hit"}, svg);
+    bindTip(hit, `<b>${m}</b><div class="t">${key.replace(/\+/g, " + ")}</div>Baseline: <b>${base ? fmt(base[i]) : "ikke testet"}</b><br>V3: <b>${fmt(v3[i])}</b>`);
+  });
+}
+
+/* ---------------------------------------------------------------
+   Graf: forklarbarhet
+---------------------------------------------------------------- */
+let xaiKey = "perm_v3";
+function featGroup(f) {
+  if (/rssi|_y \(RSSI\)/.test(f)) return "--s2";
+  if (/pir|PIR/.test(f)) return "--s3";
+  return "--s1";
+}
+function renderXai() {
+  const host = $("#xaiChart"); host.innerHTML = "";
+  const d = XAI[xaiKey];
+  const rows = d.rows;
+  const max = Math.max(...rows.map(r => r[1]));
+  const W = 1040, rowH = 30, pl = 190, pr = 70, pt = 4;
+  const H = pt + rows.length * rowH + 4;
+  const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":"Viktigste features"}, host);
+  const x = v => pl + (W - pl - pr) * v / max;
+  rows.forEach(([f, v], i) => {
+    const y0 = pt + i * rowH;
+    txt(svg, pl - 10, y0 + rowH/2 + 4, f, {"text-anchor":"end", style:"font-family:'JetBrains Mono',monospace;font-size:12px;fill:var(--text-primary)"});
+    el("path", {d: barPath(x(0), y0 + 6, x(v) - x(0), rowH - 12), fill: css(featGroup(f))}, svg);
+    txt(svg, x(v) + 6, y0 + rowH/2 + 4, v.toFixed(4).replace(".", ","), {class:"tick"});
+    const hit = el("rect", {x:0, y:y0, width:W, height:rowH, class:"hit"}, svg);
+    bindTip(hit, `<code>${f}</code><br>${d.unit}: <b>${v.toFixed(4).replace(".", ",")}</b>`);
+  });
+  $("#xaiNote").innerHTML = d.note;
+}
+
+/* ---------------------------------------------------------------
+   Simulator
+---------------------------------------------------------------- */
+// Plantegning (viewBox 560 x 300). To etasjer side om side.
+const ROOMS = {
+  kitchen: {x:20,  y:40,  w:120, h:110, label:"Kjøkken"},
+  living:  {x:20,  y:150, w:170, h:130, label:"Stue"},
+  hall:    {x:140, y:40,  w:80,  h:110, label:"Gang"},
+  toilet:  {x:190, y:210, w:70,  h:70,  label:"Toalett"},
+  stairs:  {x:220, y:40,  w:40,  h:170, label:"Trapp"},
+  stairs2: {x:300, y:40,  w:40,  h:170, label:"Trapp"},
+  bed1:    {x:340, y:40,  w:200, h:100, label:"Soverom 1"},
+  bath:    {x:340, y:140, w:90,  h:70,  label:"Bad"},
+  bed2:    {x:430, y:140, w:110, h:140, label:"Soverom 2"},
+  study:   {x:300, y:210, w:130, h:70,  label:"Kontor"}
+};
+const APS = { kitchen:[60,70,0], living:[60,250,0], stairs:[240,110,0], study:[330,250,1] }; // [x,y,etasje]
+const FLOOR = r => ["bed1","bed2","bath","study","stairs2"].includes(r) ? 1 : 0;
+const center = r => [ROOMS[r].x + ROOMS[r].w/2, ROOMS[r].y + ROOMS[r].h/2 + 8];
+
+// Manus: [aktivitet, rom, varighet i sekunder]
+const SCRIPT = [
+  ["Lie","bed1",9],["Sit","bed1",5],["Stand","bed1",3],["Walk","bath",5],["Stand","bath",7],["Bent","bath",4],
+  ["Stand","bath",3],["Walk","stairs2",4],["Stairs","stairs",7],["Walk","kitchen",5],["Stand","kitchen",7],
+  ["Bent","kitchen",4],["Kneel","kitchen",5],["Stand","kitchen",3],["Turn","kitchen",2],["Walk","living",5],
+  ["Sit","living",12],["Stand","living",3],["Jump","living",3],["Squat","living",3],["Stand","living",2],
+  ["Walk","toilet",4],["Stand","toilet",5],["Walk","hall",4],["Turn","hall",2],["Walk","stairs",3],
+  ["Stairs","stairs2",7],["Walk","study",4],["Sit","study",10],["Stand","study",2],["Walk","bed1",5]
+];
+// Gravitasjonsretning per stilling (ca. som i SPHERE-dataene)
+const POSE = {
+  Stand:[.95,-.25,.15], Walk:[.95,-.25,.15], Stairs:[.9,-.3,.2], Turn:[.95,-.25,.15], Jump:[.95,-.25,.15],
+  Sit:[.55,.1,.72], Lie:[.05,.25,.95], Bent:[.45,-.75,.35], Kneel:[.8,-.45,.25], Squat:[.65,-.55,.4]
+};
+
+const sim = {
+  t: 0, step: 0, stepT: 0, pos: center("bed1"), from: center("bed1"), room:"bed1",
+  ori: POSE.Lie.slice(), buf: [], playing: true, speed: 1, pred: null, probs: new Array(10).fill(.1),
+  history: [], hits: 0, total: 0, pir: {}, rssi: {}, phase: 0
+};
+const ACC_HZ = 20, WINDOW_S = 10;
+
+function sampleRow(i) {
+  const row = CM[i], s = row.reduce((a, b) => a + b, 0);
+  let r = Math.random() * s;
+  for (let j = 0; j < row.length; j++) { r -= row[j]; if (r <= 0) return j; }
+  return i;
+}
+function gauss() { return Math.sqrt(-2 * Math.log(Math.random() || 1e-9)) * Math.cos(2 * Math.PI * Math.random()); }
+
+function curAct() { return SCRIPT[sim.step][0]; }
+
+function advanceScript(dt) {
+  sim.stepT += dt;
+  const [act, room, dur] = SCRIPT[sim.step];
+  const target = center(room);
+  const k = Math.min(1, sim.stepT / dur);
+  if (act === "Walk" || act === "Stairs") {
+    if (act === "Stairs") {
+      // gå langs trappa, bytt etasje halvveis
+      const fromStairs = room === "stairs" ? "stairs2" : "stairs";
+      const a = ROOMS[fromStairs], b = ROOMS[room];
+      if (k < .5) { sim.pos = [a.x + a.w/2, a.y + 20 + (a.h - 40) * (k * 2)]; sim.room = fromStairs; }
+      else { sim.pos = [b.x + b.w/2, b.y + b.h - 20 - (b.h - 40) * ((k - .5) * 2)]; sim.room = room; }
+    } else {
+      const e = k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
+      sim.pos = [sim.from[0] + (target[0] - sim.from[0]) * e, sim.from[1] + (target[1] - sim.from[1]) * e];
+      sim.room = roomAt(sim.pos, FLOOR(sim.room)) || sim.room;
+    }
+  } else {
+    sim.room = room;
+  }
+  if (sim.stepT >= dur) {
+    sim.stepT = 0; sim.from = sim.pos.slice();
+    sim.step = (sim.step + 1) % SCRIPT.length;
+  }
+}
+function roomAt([px, py], floor) {
+  for (const [k, r] of Object.entries(ROOMS)) {
+    if (FLOOR(k) !== floor) continue;
+    if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return k;
+  }
+  return null;
+}
+
+function accSample(t) {
+  const act = curAct();
+  const target = POSE[act];
+  for (let i = 0; i < 3; i++) sim.ori[i] += (target[i] - sim.ori[i]) * .08;
+  let [x, y, z] = sim.ori;
+  const n = () => gauss() * .012;
+  if (act === "Walk") { const p = 2*Math.PI*1.9*t; x += .28*Math.sin(p); y += .18*Math.sin(p + 1.1); z += .12*Math.sin(2*p); }
+  if (act === "Stairs") { const p = 2*Math.PI*1.5*t; x += .4*Math.sin(p); y += .25*Math.sin(p + .7); z += .2*Math.sin(2*p + .3); }
+  if (act === "Jump") { const p = (t * 1.6) % 1; const s = p < .15 ? Math.sin(p / .15 * Math.PI) : 0; x += 1.3*s; y -= .5*s; z += .4*s; }
+  if (act === "Turn") { const p = 2*Math.PI*.6*t; y += .45*Math.sin(p); z += .25*Math.cos(p); }
+  if (act === "Kneel" || act === "Squat" || act === "Bent") { x += .04*Math.sin(2*Math.PI*.7*t); }
+  if (act === "Sit" || act === "Lie") { if (Math.random() < .004) { x += .3; y -= .2; } }
+  return [x + n(), y + n(), z + n()];
+}
+
+function secondTick() {
+  // PIR: bevegelse i rommet
+  const act = curAct();
+  const moving = ["Walk","Stairs","Jump","Turn","Bent","Kneel","Squat"].includes(act);
+  sim.pir = {};
+  if (Math.random() < (moving ? .9 : .35)) sim.pir[sim.room] = true;
+  // RSSI: avstand og etasje
+  const fl = FLOOR(sim.room);
+  for (const [k, [ax, ay, af]] of Object.entries(APS)) {
+    const pfx = af ? ax - 280 : ax, ppx = fl ? sim.pos[0] - 280 : sim.pos[0];
+    const d = Math.hypot(pfx - ppx, ay - sim.pos[1]);
+    let v = -45 - d * .16 - (af !== fl ? 14 : 0) + gauss() * 2;
+    sim.rssi[k] = Math.max(-100, Math.min(-40, v));
+  }
+  // Modellens prediksjon: Markov-kjede med stasjonær fordeling = rad i forvirringsmatrisen
+  const ti = CLASSES.indexOf(act);
+  if (sim.pred === null || sim.predFor !== ti || Math.random() < .55) sim.pred = sampleRow(ti);
+  sim.predFor = ti;
+  const row = CM[ti];
+  const p = row.map((v, j) => .5 * v + (j === sim.pred ? .45 : 0) + Math.random() * .03);
+  const s = p.reduce((a, b) => a + b, 0);
+  sim.probs = p.map(v => v / s);
+  const ok = sim.pred === ti;
+  sim.total++; if (ok) sim.hits++;
+  sim.history.push(ok); if (sim.history.length > 60) sim.history.shift();
+}
+
+// --- rendering av simulatoren
+let houseNodes = {};
+function buildHouse() {
+  const svg = $("#house"); svg.innerHTML = "";
+  houseNodes = {rooms:{}};
+  txt(svg, 20, 26, "1. etasje", {class:"flabel"});
+  txt(svg, 300, 26, "2. etasje", {class:"flabel"});
+  for (const [k, r] of Object.entries(ROOMS)) {
+    houseNodes.rooms[k] = el("rect", {x:r.x, y:r.y, width:r.w, height:r.h, rx:4, class:"room"}, svg);
+    const vertical = r.w < 50;
+    txt(svg, r.x + (vertical ? r.w/2 : 8), r.y + (vertical ? r.h/2 : 16), r.label, {class:"rlabel", ...(vertical ? {"text-anchor":"middle", transform:`rotate(-90 ${r.x + r.w/2} ${r.y + r.h/2})`} : {})});
+  }
+  // trappetrinn
+  for (const s of ["stairs","stairs2"]) {
+    const r = ROOMS[s];
+    for (let i = 1; i < 9; i++) el("line", {x1:r.x + 4, x2:r.x + r.w - 4, y1:r.y + i * r.h / 9, y2:r.y + i * r.h / 9, stroke:"var(--room-line)", "stroke-width":1}, svg);
+  }
+  for (const [k, [x, y]] of Object.entries(APS)) {
+    el("circle", {cx:x, cy:y, r:6, class:"ap"}, svg);
+    el("circle", {cx:x, cy:y, r:2, fill:"var(--accent)"}, svg);
+  }
+  houseNodes.halo = el("circle", {r:16, class:"halo"}, svg);
+  houseNodes.person = el("circle", {r:7, class:"person"}, svg);
+}
+function buildPanels() {
+  $("#probs").innerHTML = CLASSES.map((c, i) => `<div class="prow" data-i="${i}"><span class="nm">${c}</span><span class="tr"><i style="width:0%"></i></span><span class="pc">0 %</span></div>`).join("");
+  $("#rssi").innerHTML = Object.keys(APS).map(k => `<div data-k="${k}">${({kitchen:"Kjøkken",living:"Stue",stairs:"Trapp",study:"Kontor"})[k]}<br><b>–</b><div class="bar"><i style="width:0%"></i></div></div>`).join("");
+  $("#ribbon").innerHTML = Array.from({length:60}, () => "<i class='e'></i>").join("");
+  $("#accLegend").innerHTML = `<span style="color:${css("--s1")}">x</span> &nbsp;<span style="color:${css("--s2")}">y</span> &nbsp;<span style="color:${css("--s3")}">z</span>`;
+}
+function drawHouse() {
+  for (const [k, n] of Object.entries(houseNodes.rooms)) n.classList.toggle("on", !!sim.pir[k]);
+  houseNodes.person.setAttribute("cx", sim.pos[0]); houseNodes.person.setAttribute("cy", sim.pos[1]);
+  const pulse = 14 + 4 * Math.sin(performance.now() / 300);
+  houseNodes.halo.setAttribute("cx", sim.pos[0]); houseNodes.halo.setAttribute("cy", sim.pos[1]); houseNodes.halo.setAttribute("r", pulse);
+}
+function drawPanels() {
+  const ti = CLASSES.indexOf(curAct());
+  $("#truth").textContent = curAct();
+  const pe = $("#pred");
+  if (sim.pred !== null) {
+    pe.textContent = CLASSES[sim.pred];
+    pe.className = "val " + (sim.pred === ti ? "ok" : "miss");
+  }
+  $$("#probs .prow").forEach((r, i) => {
+    r.classList.toggle("pred", i === sim.pred);
+    r.classList.toggle("truth", i === ti);
+    $("i", r).style.width = (sim.probs[i] * 100).toFixed(1) + "%";
+    $(".pc", r).textContent = Math.round(sim.probs[i] * 100) + " %";
+  });
+  $$("#rssi > div").forEach(d => {
+    const v = sim.rssi[d.dataset.k]; if (v === undefined) return;
+    $("b", d).textContent = Math.round(v);
+    $("i", d).style.width = ((v + 100) / 60 * 100).toFixed(0) + "%";
+  });
+  const rib = $$("#ribbon i"), h = sim.history;
+  rib.forEach((r, i) => {
+    const v = h[i - (60 - h.length)];
+    r.className = v === undefined ? "e" : v ? "" : "x";
+  });
+  $("#accSession").textContent = sim.total ? Math.round(sim.hits / sim.total * 100) + " %" : "–";
+  $("#clock").textContent = `t = ${Math.floor(sim.t)} s`;
+}
+const canvas = $("#acc"), ctx = canvas.getContext("2d");
+function drawAcc() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const yv = v => h/2 - v * (h / 3.2);
+  ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+  [-1, -.5, 0, .5, 1].forEach(v => { ctx.beginPath(); ctx.moveTo(0, yv(v)); ctx.lineTo(w, yv(v)); ctx.stroke(); });
+  ctx.fillStyle = css("--text-muted"); ctx.font = "10px Inter, sans-serif";
+  [-1, 0, 1].forEach(v => ctx.fillText((v > 0 ? "+" : "") + v + " g", 4, yv(v) - 3));
+  const n = ACC_HZ * WINDOW_S, buf = sim.buf;
+  const cols = [css("--s1"), css("--s2"), css("--s3")];
+  for (let a = 0; a < 3; a++) {
+    ctx.strokeStyle = cols[a]; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.beginPath();
+    for (let i = 0; i < buf.length; i++) {
+      const x = w - (buf.length - 1 - i) * (w / (n - 1));
+      const y = yv(buf[i][a]);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+let last = null, accAcc = 0, secAcc = 1;
+function loop(now) {
+  if (last === null) last = now;
+  let dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (sim.playing && simVisible) {
+    dt *= sim.speed;
+    accAcc += dt; secAcc += dt;
+    while (accAcc >= 1 / ACC_HZ) {
+      accAcc -= 1 / ACC_HZ;
+      sim.t += 1 / ACC_HZ;
+      advanceScript(1 / ACC_HZ);
+      sim.buf.push(accSample(sim.t));
+      if (sim.buf.length > ACC_HZ * WINDOW_S) sim.buf.shift();
+    }
+    if (secAcc >= 1) { secAcc -= 1; secondTick(); drawPanels(); }
+    drawAcc();
+  }
+  drawHouse();
+  requestAnimationFrame(loop);
+}
+let simVisible = true;
+new IntersectionObserver(es => es.forEach(e => simVisible = e.isIntersecting), {rootMargin:"200px"}).observe($("#demo"));
+
+const playBtn = $("#playBtn");
+function setPlaying(p) {
+  sim.playing = p;
+  playBtn.textContent = p ? "❚❚ Pause" : "▶ Spill av";
+  $("#liveBadge").classList.toggle("paused", !p);
+  $("#liveBadge").lastChild.textContent = p ? "LIVE" : "PAUSE";
+}
+playBtn.addEventListener("click", () => setPlaying(!sim.playing));
+segGroup($(".simhead .seg"), "speed", v => sim.speed = +v);
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) setPlaying(false);
+
+/* ---------------------------------------------------------------
+   Kontroller og oppstart
+---------------------------------------------------------------- */
+segGroup($("#metricSeg"), "m", v => { metric = v; renderModels(); });
+segGroup($("#noisePipe"), "p", v => { noisePipe = v; renderNoise(); });
+$("#noiseSlider").addEventListener("input", e => setNoise(e.target.value));
+$$("#sensorChips .chip").forEach(b => b.addEventListener("click", () => {
+  sensors[b.dataset.s] = !sensors[b.dataset.s];
+  b.setAttribute("aria-pressed", sensors[b.dataset.s]);
+  renderAbl();
+}));
+segGroup($("#xaiSeg"), "x", v => { xaiKey = v; renderXai(); });
+
+function renderAll() {
+  renderSteps(); renderModels(); renderCM(); renderClass(); renderNoise(); renderAbl(); renderXai();
+  $("#accLegend") && buildPanelsLegend();
+}
+function buildPanelsLegend() {
+  $("#accLegend").innerHTML = `<span style="color:${css("--s1")}">x</span> &nbsp;<span style="color:${css("--s2")}">y</span> &nbsp;<span style="color:${css("--s3")}">z</span>`;
+}
+
+buildHouse(); buildPanels(); renderAll();
+// varm opp 45 s så grafer og tidslinje har innhold fra start
+for (let i = 1; i <= ACC_HZ * 45; i++) {
+  sim.t += 1/ACC_HZ; advanceScript(1/ACC_HZ); sim.buf.push(accSample(sim.t));
+  if (sim.buf.length > ACC_HZ * WINDOW_S) sim.buf.shift();
+  if (i % ACC_HZ === 0) secondTick();
+}
+drawPanels();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
